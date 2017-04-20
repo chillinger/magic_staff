@@ -211,107 +211,6 @@ class FlashHeadAnimation: public Animation
 Animation * currentAnimation = new Animation();
 Animation * scanAnimation;
 
-void displaySensorDetails(void)
-{
-  sensor_t sensor;
-  accel.getSensor(&sensor);
-  Serial.println("------------------------------------");
-  Serial.print  ("Sensor:       "); Serial.println(sensor.name);
-  Serial.print  ("Driver Ver:   "); Serial.println(sensor.version);
-  Serial.print  ("Unique ID:    "); Serial.println(sensor.sensor_id);
-  Serial.print  ("Max Value:    "); Serial.print(sensor.max_value); Serial.println(" m/s^2");
-  Serial.print  ("Min Value:    "); Serial.print(sensor.min_value); Serial.println(" m/s^2");
-  Serial.print  ("Resolution:   "); Serial.print(sensor.resolution); Serial.println(" m/s^2");  
-  Serial.println("------------------------------------");
-  Serial.println("");
-  delay(500);
-}
-
-void displayDataRate(void)
-{
-  Serial.print  ("Data Rate:    "); 
-  
-  switch(accel.getDataRate())
-  {
-    case ADXL345_DATARATE_3200_HZ:
-      Serial.print  ("3200 "); 
-      break;
-    case ADXL345_DATARATE_1600_HZ:
-      Serial.print  ("1600 "); 
-      break;
-    case ADXL345_DATARATE_800_HZ:
-      Serial.print  ("800 "); 
-      break;
-    case ADXL345_DATARATE_400_HZ:
-      Serial.print  ("400 "); 
-      break;
-    case ADXL345_DATARATE_200_HZ:
-      Serial.print  ("200 "); 
-      break;
-    case ADXL345_DATARATE_100_HZ:
-      Serial.print  ("100 "); 
-      break;
-    case ADXL345_DATARATE_50_HZ:
-      Serial.print  ("50 "); 
-      break;
-    case ADXL345_DATARATE_25_HZ:
-      Serial.print  ("25 "); 
-      break;
-    case ADXL345_DATARATE_12_5_HZ:
-      Serial.print  ("12.5 "); 
-      break;
-    case ADXL345_DATARATE_6_25HZ:
-      Serial.print  ("6.25 "); 
-      break;
-    case ADXL345_DATARATE_3_13_HZ:
-      Serial.print  ("3.13 "); 
-      break;
-    case ADXL345_DATARATE_1_56_HZ:
-      Serial.print  ("1.56 "); 
-      break;
-    case ADXL345_DATARATE_0_78_HZ:
-      Serial.print  ("0.78 "); 
-      break;
-    case ADXL345_DATARATE_0_39_HZ:
-      Serial.print  ("0.39 "); 
-      break;
-    case ADXL345_DATARATE_0_20_HZ:
-      Serial.print  ("0.20 "); 
-      break;
-    case ADXL345_DATARATE_0_10_HZ:
-      Serial.print  ("0.10 "); 
-      break;
-    default:
-      Serial.print  ("???? "); 
-      break;
-  }  
-  Serial.println(" Hz");  
-}
-
-void displayRange(void)
-{
-  Serial.print  ("Range:         +/- "); 
-  
-  switch(accel.getRange())
-  {
-    case ADXL345_RANGE_16_G:
-      Serial.print  ("16 "); 
-      break;
-    case ADXL345_RANGE_8_G:
-      Serial.print  ("8 "); 
-      break;
-    case ADXL345_RANGE_4_G:
-      Serial.print  ("4 "); 
-      break;
-    case ADXL345_RANGE_2_G:
-      Serial.print  ("2 "); 
-      break;
-    default:
-      Serial.print  ("?? "); 
-      break;
-  }  
-  Serial.println(" g");  
-}
 
 
 void animate(){
@@ -349,31 +248,12 @@ void setup(void)
 
   /* Set the range to whatever is appropriate for your project */
   accel.setRange(ADXL345_RANGE_16_G);
-  // displaySetRange(ADXL345_RANGE_8_G);
-  // displaySetRange(ADXL345_RANGE_4_G);
-  // displaySetRange(ADXL345_RANGE_2_G);
   
-  /* Display some basic information on this sensor */
-  displaySensorDetails();
   
-  /* Display additional settings (outside the scope of sensor_t) */
-  displayDataRate();
-  displayRange();
-  Serial.println("");
 }
 
 void loop(void) 
 {
-  /* Get a new sensor event */ 
-  /*sensors_event_t event; 
-  accel.getEvent(&event);
-
-  accel3d measurement = accel3d(event.acceleration.x - offset_x, event.acceleration.y - offset_y, event.acceleration.z - offset_z);
-  float magn = measurement.magnitude();
-  exp_mov_avg = exp_mov_avg + filter_weight * (magn - exp_mov_avg);
-  x_mov_avg = x_mov_avg + axis_filter_weight * (measurement.x - x_mov_avg);
-  y_mov_avg = y_mov_avg + axis_filter_weight * (measurement.y - y_mov_avg);
-  z_mov_avg = z_mov_avg + axis_filter_weight * (measurement.z - z_mov_avg);*/
 
   int b1 = digitalRead(BUTTON1_PIN);
   int b2 = digitalRead(BUTTON2_PIN);
@@ -385,33 +265,7 @@ void loop(void)
       animationThread.run();
     } 
     
-   /* Serial.print(x_mov_avg);
-      Serial.print(", ");
-      Serial.print(y_mov_avg);
-      Serial.print(", ");
-      Serial.print(z_mov_avg);
-      Serial.print(", ");
-      Serial.println("");*/
-    
-    /*float diff = (magn - exp_mov_avg)*(magn - exp_mov_avg);
-    if (diff > 150.0){
-      Axis axis = Axis::X;
-      float max_value = max(max(x_mov_avg,y_mov_avg),z_mov_avg);
-      if(max_value == x_mov_avg) axis= Axis::X;
-      if(max_value == y_mov_avg) axis= Axis::Y;
-      axis= Axis::Z;
-      
-      Serial.print("Shock!!   ");
-      Serial.print(x_mov_avg);
-      Serial.print(", ");
-      Serial.print(y_mov_avg);
-      Serial.print(", ");
-      Serial.print(z_mov_avg);
-      Serial.print(", ");
-      Serial.println(diff);
-      currentAnimation = new ScanAnimation((max(diff-150,0))/5.0, axis);
-      ran_cycles = 0;
-    }*/
+
     if(b1 == 0){
       scanAnimation->reset();
       currentAnimation = scanAnimation;
@@ -430,8 +284,5 @@ void loop(void)
     
     delay(1);
     
-  //}
-  
-  
-  //ran_cycles++;
+
 }
