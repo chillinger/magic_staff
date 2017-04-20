@@ -79,6 +79,45 @@ void led_show_both(){
   strip_oben.show();
 }
 
+long HSV_to_RGB( float h, float s, float v ) {
+  /* modified from Alvy Ray Smith's site: http://www.alvyray.com/Papers/hsv2rgb.htm */
+  // H is given on [0, 6]. S and V are given on [0, 1].
+  // RGB is returned as a 24-bit long #rrggbb
+  int i;
+  float m, n, f;
+
+  // not very elegant way of dealing with out of range: return black
+  if ((s<0.0) || (s>1.0) || (v<0.0) || (v>1.0)) {
+    return 0L;
+  }
+
+  if ((h < 0.0) || (h > 6.0)) {
+    return long( v * 255 ) + long( v * 255 ) * 256 + long( v * 255 ) * 65536;
+  }
+  i = floor(h);
+  f = h - i;
+  if ( !(i&1) ) {
+    f = 1 - f; // if i is even
+  }
+  m = v * (1 - s);
+  n = v * (1 - s * f);
+  switch (i) {
+  case 6:
+  case 0:
+    return long(v * 255 ) * 65536 + long( n * 255 ) * 256 + long( m * 255);
+  case 1:
+    return long(n * 255 ) * 65536 + long( v * 255 ) * 256 + long( m * 255);
+  case 2:
+    return long(m * 255 ) * 65536 + long( v * 255 ) * 256 + long( n * 255);
+  case 3:
+    return long(m * 255 ) * 65536 + long( n * 255 ) * 256 + long( v * 255);
+  case 4:
+    return long(n * 255 ) * 65536 + long( m * 255 ) * 256 + long( v * 255);
+  case 5:
+    return long(v * 255 ) * 65536 + long( m * 255 ) * 256 + long( n * 255);
+  }
+}
+
 void led_flash_end(){
   for(int i = 0; i<25; i++){
     led_set_both(60, 0,0,i*10+4);
@@ -104,6 +143,12 @@ void led_set_both(int pixel, int r, int g , int b){
 void led_set_both(int pixel, uint32_t c){
   strip_unten.setPixelColor(pixel, c);
   strip_oben.setPixelColor(pixel, c);
+}
+
+void led_set_head(uint32_t c){
+  for(int i=LEDS_OBEN; i<LEDS_OBEN + LEDS_SPITZE; i++){
+    strip_oben.setPixelColor(i, c);
+  }
 }
 
 void led_pulse(int magnitude){
@@ -185,32 +230,58 @@ class FlashHeadAnimation: public Animation
   
   bool started = false;
   bool finished = false;
-  int brightness = 0;
-  uint32_t c = Adafruit_NeoPixel::Color(0,0,255);
+  bool up = true;
+  float up_speed = 0.005;
+  float down_speed = 0.01;
+  float hue = 0.0;
+  float saturation = 1.0;
+  float value = 0.0;
+  double x = 0;
+  double dx = 0.01;
+  double ticks = 0;
+  int steps = 0;
+  
   public:
  
-  FlashHeadAnimation(uint32_t c){
-    this->c = c;
+  FlashHeadAnimation(float hue){
+    reset();
+    this->hue = hue;
   }
   void step(){
     if(!finished){
-      if(started == false){
-        led_blank();
-        started = true;
+      if(up){
+        value += up_speed;
+        if(value >= 1.0f){
+          value = 1.0f;
+          up = false;
+        }
+      }else{
+        value += down_speed;
+        if(value <= 0.0f){
+          value = 0.0f;
+          finished = true;
+        }          
       }
-      for(int i=LEDS_OBEN; i<LEDS_OBEN + LEDS_SPITZE; i++){
-        strip_oben.setPixelColor(i, this->brightness, this->brightness, this->brightness);
-      }
-      led_show_both();
-    }
-   
-    
+      uint32_t c = HSV_to_RGB(hue, saturation, value);
+      led_set_head(c);     
+      strip_oben.show();
+    }   
+  }
+  void reset(){
+      started = false;
+     finished = false;
+     up = true;
+     up_speed = 0.01f;
+     down_speed = -0.03f;
+     hue = 0.0f;
+     saturation = 1.0;
+     value = 0.0f;
   }
 };
 
 Animation * currentAnimation = new Animation();
 Animation * scanAnimation;
-
+Animation * flashHeadAnimation;
 
 
 void animate(){
@@ -229,25 +300,18 @@ void setup(void)
   Serial.begin(9600);
   Serial.println("Accelerometer Test"); Serial.println("");
   
-  /* Initialise the sensor */
-  if(!accel.begin())
-  {
-    /* There was a problem detecting the ADXL345 ... check your connections */
-    Serial.println("Ooops, no ADXL345 detected ... Check your wiring!");
-    while(1);
-  }
+  
   strip_unten.begin();
   strip_unten.show();
   strip_oben.begin();
   strip_oben.show();
   scanAnimation = new ScanAnimation(255, Axis::X);
+  flashHeadAnimation = new FlashHeadAnimation(Adafruit_NeoPixel::Color(0,0,255));
 
   animationThread.onRun(animate);
   animationThread.setInterval(3);
 
 
-  /* Set the range to whatever is appropriate for your project */
-  accel.setRange(ADXL345_RANGE_16_G);
   
   
 }
@@ -271,15 +335,8 @@ void loop(void)
       currentAnimation = scanAnimation;
     }
     if(b2 == 0){
-      for(int i=LEDS_OBEN; i<LEDS_OBEN + LEDS_SPITZE; i++){
-        strip_oben.setPixelColor(i, 255,255,255);
-      }
-      strip_oben.show();
-    }else{
-      for(int i=LEDS_OBEN; i<LEDS_OBEN + LEDS_SPITZE; i++){
-        strip_oben.setPixelColor(i, 0,0,0);
-      }
-      strip_oben.show();
+      flashHeadAnimation->reset();
+      currentAnimation = flashHeadAnimation;
     }
     
     delay(1);
