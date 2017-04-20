@@ -24,7 +24,7 @@ Adafruit_ADXL345_Unified accel = Adafruit_ADXL345_Unified(12345);
 Adafruit_NeoPixel strip_unten = Adafruit_NeoPixel(LEDS_UNTEN, LEDS_UNTEN_PIN);
 Adafruit_NeoPixel strip_oben = Adafruit_NeoPixel(LEDS_OBEN + LEDS_SPITZE, LEDS_OBEN_PIN);
 Thread animationThread = Thread();
-
+float global_hue = 0;
 
 
 float exp_mov_avg = 0.0, filter_weight = 1.0/8.0;
@@ -55,6 +55,13 @@ class accel3d
     if(max_value == x) return Axis::X;
     if(max_value == y) return Axis::Y;
     return Axis::Z;
+  }
+
+  float main_component_value(){
+    float max_value = max(max(x,y),z);
+    if(max_value == x) return x;
+    if(max_value == y) return y;
+    return z;
   }
   
   float x;
@@ -202,10 +209,12 @@ class ScanAnimation: public Animation
       }
       if(currentLED < LEDS_UNTEN){
         led_blank();
+        float fcled = (float)currentLED;
+        float fledo = (float)LEDS_OBEN;
         if(currentLED < LEDS_OBEN)
-          led_set_both(currentLED,c); 
+          led_set_both(currentLED,HSV_to_RGB(global_hue, 1.0, 1.0 - fcled/fledo)); 
         else
-          strip_unten.setPixelColor(currentLED,c); 
+          strip_unten.setPixelColor(currentLED,HSV_to_RGB(global_hue, 1.0, 1.0 - fcled/fledo)); 
           
         currentLED++;
       }else{
@@ -217,6 +226,7 @@ class ScanAnimation: public Animation
     }   
   }
   void reset(){
+    
     currentLED = 0;
     started = false;
     finished = false;
@@ -237,12 +247,13 @@ class FlashHeadAnimation: public Animation
   float saturation = 1.0;
   float value = 0.0;
   double x = 0;
-  double dx = 0.01;
+  
   double ticks = 0;
+  double base = 1.5;
   int steps = 0;
   
   public:
- 
+ double dx = 0.03;
   FlashHeadAnimation(float hue){
     reset();
     this->hue = hue;
@@ -250,7 +261,9 @@ class FlashHeadAnimation: public Animation
   void step(){
     if(!finished){
       if(up){
-        value += up_speed;
+        value = pow(base, x) - 1;
+        x += dx;
+        
         if(value >= 1.0f){
           value = 1.0f;
           up = false;
@@ -267,21 +280,23 @@ class FlashHeadAnimation: public Animation
       strip_oben.show();
     }   
   }
+
   void reset(){
       started = false;
      finished = false;
      up = true;
      up_speed = 0.01f;
      down_speed = -0.03f;
-     hue = 0.0f;
+     hue = global_hue;
      saturation = 1.0;
      value = 0.0f;
+     x = 0;
   }
 };
 
 Animation * currentAnimation = new Animation();
 Animation * scanAnimation;
-Animation * flashHeadAnimation;
+FlashHeadAnimation * flashHeadAnimation;
 
 
 void animate(){
@@ -299,7 +314,11 @@ void setup(void)
   pinMode(BUTTON3_PIN, INPUT_PULLUP);
   Serial.begin(9600);
   Serial.println("Accelerometer Test"); Serial.println("");
-  
+  if(!accel.begin())
+  {
+     /* There was a problem detecting the ADXL345 ... check your connections */
+      while(1);
+  }
   
   strip_unten.begin();
   strip_unten.show();
@@ -323,6 +342,27 @@ void loop(void)
   int b2 = digitalRead(BUTTON2_PIN);
   int b3 = digitalRead(BUTTON3_PIN);
 
+/* Get a new sensor event */     
+  sensors_event_t event;    
+  accel.getEvent(&event);   
+  
+  accel3d measurement = accel3d(event.acceleration.x - offset_x, event.acceleration.y - offset_y, event.acceleration.z - offset_z);   
+  float magn = measurement.magnitude();   
+  exp_mov_avg = exp_mov_avg + filter_weight * (magn - exp_mov_avg);   
+  x_mov_avg = x_mov_avg + axis_filter_weight * (measurement.x - x_mov_avg);   
+  y_mov_avg = y_mov_avg + axis_filter_weight * (measurement.y - y_mov_avg);   
+  z_mov_avg = z_mov_avg + axis_filter_weight * (measurement.z - z_mov_avg);
+
+  global_hue = 3.0 + 1.0 * measurement.x / magn + 2.0 * measurement.y / magn + 3.0 * measurement.z / magn;
+  /*Serial.print("hue: ");
+  Serial.print(global_hue);
+  Serial.print(", x norm: ");
+  Serial.print(1.0 * measurement.x / magn);
+  Serial.print(", y norm: ");
+  Serial.print(2.0 * measurement.y / magn);
+  Serial.print(", z norm: ");
+  Serial.println(3.0 * measurement.z / magn);*/
+
 
   //if(ran_cycles > INITIAL_DELAY){
     if(animationThread.shouldRun()){
@@ -335,9 +375,12 @@ void loop(void)
       currentAnimation = scanAnimation;
     }
     if(b2 == 0){
+      flashHeadAnimation->dx = 0.2;
       flashHeadAnimation->reset();
       currentAnimation = flashHeadAnimation;
     }
+      strip_unten.setPixelColor(0, HSV_to_RGB(global_hue, 1.0, 0.2));
+  strip_unten.show();
     
     delay(1);
     
