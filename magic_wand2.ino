@@ -185,6 +185,8 @@ class Animation
 class ScanAnimation: public Animation
 {
   int currentLED = 0;
+  float x = 0;
+  float dx = 0.1;
   bool started = false;
   bool finished = false;
   int brightness = 0;
@@ -207,16 +209,27 @@ class ScanAnimation: public Animation
         led_blank();
         started = true;
       }
-      if(currentLED < LEDS_UNTEN){
+      if(x < LEDS_UNTEN){
         led_blank();
-        float fcled = (float)currentLED;
         float fledo = (float)LEDS_OBEN;
-        if(currentLED < LEDS_OBEN)
-          led_set_both(currentLED,HSV_to_RGB(global_hue, 1.0, 1.0 - fcled/fledo)); 
-        else
-          strip_unten.setPixelColor(currentLED,HSV_to_RGB(global_hue, 1.0, 1.0 - fcled/fledo)); 
-          
+        int l1 = (int)x;
+        int l2 = l1 +1;
+        float part_l2 = x - (float)l1;
+        
+        float part_l1 = 1 - part_l2;
+
+        part_l2 *= x/(float)LEDS_UNTEN;
+        part_l1 *= x/(float)LEDS_UNTEN;
+
+        if(l2 < LEDS_OBEN){
+          led_set_both(l1,HSV_to_RGB(global_hue, 1.0, part_l1)); 
+          led_set_both(l2,HSV_to_RGB(global_hue, 1.0, part_l2)); 
+        }else{
+          strip_unten.setPixelColor(l1,HSV_to_RGB(global_hue, 1.0, part_l1)); 
+          strip_unten.setPixelColor(l2,HSV_to_RGB(global_hue, 1.0, part_l2)); 
+        }
         currentLED++;
+        x += dx;
       }else{
         finished = true;
         currentLED = 0;
@@ -226,7 +239,7 @@ class ScanAnimation: public Animation
     }   
   }
   void reset(){
-    
+    x = 0;
     currentLED = 0;
     started = false;
     finished = false;
