@@ -54,6 +54,7 @@ FlashHeadAnimation * flashHeadAnimation;
 ShootAnimation * shootAnimation;
 BreatheAnimation * breatheAnimation;
 StarAnimation * starAnimation;
+ShootFromGripAnimation * shootFromGripAnimation;
 
 
 int max_parallel_animations = 10;
@@ -114,6 +115,8 @@ void setup(void)
   //addAnimation(breatheAnimation);
   starAnimation = new StarAnimation(global_hue, 15);
   addAnimation(starAnimation);
+  shootFromGripAnimation = new ShootFromGripAnimation(global_hue);
+  addAnimation(shootFromGripAnimation);
   
   animationThread.onRun(animate);
   animationThread.setInterval(3);
@@ -160,8 +163,9 @@ void loop(void)
     
 
     if(b1 == 0){
-      scanAnimation->reset();
-      scanAnimation->dx = 1.5;
+      shootFromGripAnimation->speed = 15.0;
+      shootFromGripAnimation->reset();
+      
     }
     if(b2 == 0){
       
@@ -172,7 +176,7 @@ void loop(void)
       shootAnimation->reset();
     }
 
-    bool all_animations_done = scanAnimation->finished && flashHeadAnimation->finished && shootAnimation->finished;
+    bool all_animations_done = scanAnimation->finished && flashHeadAnimation->finished && shootAnimation->finished && shootFromGripAnimation->finished;
     starAnimation->finished = !all_animations_done;
     if(starAnimation->finished){
       starAnimation->reset();

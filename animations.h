@@ -72,6 +72,22 @@ class ShootAnimation: public Animation
   void reset();
 };
 
+class ShootFromGripAnimation: public Animation
+{
+  float current_position_up;
+  float current_position_down;
+  bool staff_up_done = false;
+  bool staff_down_done = false;
+  FlashHeadAnimation * flashHeadAnimation;
+  public:
+  float speed;
+  float hue;
+  ShootFromGripAnimation(float hue);
+  ShootFromGripAnimation(float hue, float speed);
+  void step();
+  void reset();
+};
+
 class BreatheAnimation: public Animation
 {
   float current_value=0.0;

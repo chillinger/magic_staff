@@ -202,3 +202,55 @@ void StarAnimation::reset(){
   }
   led_blank();
 }
+
+
+
+ShootFromGripAnimation::ShootFromGripAnimation(float hue){
+  flashHeadAnimation = new FlashHeadAnimation(hue);
+  this->speed = 7.0;
+  this->hue = hue;
+  current_position_up = 120.0;
+  current_position_down=current_position_up;
+}
+ShootFromGripAnimation::ShootFromGripAnimation(float hue, float speed){
+  flashHeadAnimation = new FlashHeadAnimation(hue, 0.02, 0.001);
+  this->speed = speed;
+  this->hue = hue;
+  current_position_up = 120.0;
+  current_position_down=current_position_up;
+}
+void ShootFromGripAnimation::step(){
+  if(!finished){
+    led_blank();
+    if(this->current_position_up > STAFF_CM + 10.0){
+      staff_up_done = true;
+    }
+    if(this->current_position_down < -10.0){
+      staff_down_done = true;
+    }
+    for(int i = 0; i< total_leds; i++){
+      float brightness = brightness_of_pixel(this->current_position_up, i, current_position_up/20.0 + 3) + brightness_of_pixel(this->current_position_down, i, current_position_down/20.0 + 3);
+      set_pixel_on_staff(i, HSV_to_RGB(hue, 1.0, min(1.0,brightness)));
+      
+    }
+    this->current_position_up += this->speed;
+    this->current_position_down -= this->speed;
+    if(staff_up_done){
+      if(!flashHeadAnimation->finished){
+        flashHeadAnimation->step();
+      }else{
+        finished = true;
+      }
+    }
+    
+  }
+}
+
+void ShootFromGripAnimation::reset(){
+  current_position_up = 120.0;
+  current_position_down=current_position_up;
+  finished = false;
+  staff_up_done = false;
+  staff_down_done = false;
+  flashHeadAnimation->reset();
+}
