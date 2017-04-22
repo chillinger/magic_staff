@@ -24,7 +24,7 @@
 Adafruit_ADXL345_Unified accel = Adafruit_ADXL345_Unified(12345);
 
 Thread animationThread = Thread();
-float global_hue = 0;
+float global_hue = 2.0;
 
 
 float exp_mov_avg = 0.0, filter_weight = 1.0/8.0;
@@ -49,8 +49,13 @@ void led_pulse(int magnitude){
 }
 
 
-Animation * scanAnimation;
+ScanAnimation * scanAnimation;
 FlashHeadAnimation * flashHeadAnimation;
+ShootAnimation * shootAnimation;
+BreatheAnimation * breatheAnimation;
+StarAnimation * starAnimation;
+
+
 int max_parallel_animations = 10;
 Animation ** animations = malloc(sizeof(Animation*) * max_parallel_animations);
 int num_animations = 0;
@@ -69,14 +74,11 @@ void clearAnimations(){
 }
 
 void animate(){
-  bool done = true;
+
   for(int i=0; i<num_animations; i++){
-    animations[i]->step();
-     done = done && animations[i]->finished;
+    animations[i]->step();     
   }
-  
-  
-  
+  led_show_both();
   
 }
 
@@ -106,6 +108,12 @@ void setup(void)
   addAnimation(scanAnimation);
   flashHeadAnimation = new FlashHeadAnimation(Adafruit_NeoPixel::Color(0,0,255));
   addAnimation(flashHeadAnimation);
+  shootAnimation = new ShootAnimation(global_hue);
+  addAnimation(shootAnimation);
+  //breatheAnimation = new BreatheAnimation(global_hue);
+  //addAnimation(breatheAnimation);
+  starAnimation = new StarAnimation(global_hue, 15);
+  addAnimation(starAnimation);
   
   animationThread.onRun(animate);
   animationThread.setInterval(3);
@@ -114,6 +122,7 @@ void setup(void)
   
   
 }
+
 
 void loop(void) 
 {
@@ -152,18 +161,23 @@ void loop(void)
 
     if(b1 == 0){
       scanAnimation->reset();
+      scanAnimation->dx = 1.5;
     }
     if(b2 == 0){
-      flashHeadAnimation->dx = 0.2;
+      
       flashHeadAnimation->reset();
     }
     if(b3 == 0){
-      clearAnimations();
+      shootAnimation->speed = 15.0;
+      shootAnimation->reset();
     }
-      strip_unten.setPixelColor(0, HSV_to_RGB(global_hue, 1.0, 0.2));
-  strip_unten.show();
-    
-    delay(1);
+
+    bool all_animations_done = scanAnimation->finished && flashHeadAnimation->finished && shootAnimation->finished;
+    starAnimation->finished = !all_animations_done;
+    if(starAnimation->finished){
+      starAnimation->reset();
+    }
+   
     
 
 }

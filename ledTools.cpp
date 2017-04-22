@@ -47,16 +47,22 @@ long HSV_to_RGB( float h, float s, float v ) {
     case 6:
     case 0:
       ret = long(v * 255 ) * 65536 + long( n * 255 ) * 256 + long( m * 255);
+      break;
     case 1:
       ret = long(n * 255 ) * 65536 + long( v * 255 ) * 256 + long( m * 255);
+      break;
     case 2:
       ret = long(m * 255 ) * 65536 + long( v * 255 ) * 256 + long( n * 255);
+      break;
     case 3:
       ret = long(m * 255 ) * 65536 + long( n * 255 ) * 256 + long( v * 255);
+      break;
     case 4:
       ret = long(n * 255 ) * 65536 + long( m * 255 ) * 256 + long( v * 255);
+      break;
     case 5:
       ret = long(v * 255 ) * 65536 + long( m * 255 ) * 256 + long( n * 255);
+      break;
   }
   return ret;
 }
@@ -91,5 +97,37 @@ void led_set_both(int pixel, uint32_t c){
 void led_set_head(uint32_t c){
   for(int i=LEDS_OBEN; i<LEDS_OBEN + LEDS_SPITZE; i++){
     strip_oben.setPixelColor(i, c);
+  }
+}
+
+
+float total_leds = (float)LEDS_UNTEN + (float)LEDS_OBEN;
+float distance_between_pixels = STAFF_CM/total_leds;
+float light_distance = 5.0;
+float current_pixel_pos = 0.0;
+
+//Punkt auf dem Stab in cm von unten
+float point_on_staff = 0.0;
+
+/**
+ * Berechnet die Nähe des gegebenen Pixels zum aktuellen Punkt auf dem Stab
+ * je näher, desto höher
+ * 
+ * 0 ist die untere Spitze, STAFF_CM die obere
+ * Pixel 0 ist das unterste Pixel, LEDS_UNTEN + LEDS_OBEN das oberste
+ */
+float brightness_of_pixel(float position, int pixel, float radius){
+  float current_pixel_pos = position / distance_between_pixels;
+  float distance_pixels =  abs(current_pixel_pos - pixel);
+  float brightness = 0;
+
+  brightness = max(0.0, radius - distance_pixels) / radius ;
+  return brightness;
+}
+void set_pixel_on_staff(int pixel, uint32_t color){
+  if(pixel < LEDS_UNTEN){
+    strip_unten.setPixelColor(LEDS_UNTEN - pixel, color);
+  }else{
+    strip_oben.setPixelColor(pixel - LEDS_UNTEN , color);
   }
 }
