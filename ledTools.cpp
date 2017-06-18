@@ -100,6 +100,13 @@ void led_set_head(uint32_t c){
   }
 }
 
+//set all leds on staff except head to one color
+void led_set_staff(uint32_t c){
+  for(int i=0; i<LEDS_OBEN + LEDS_UNTEN; i++){
+    set_pixel_on_staff(i, c);
+  }
+}
+
 
 float total_leds = (float)LEDS_UNTEN + (float)LEDS_OBEN;
 float distance_between_pixels = STAFF_CM/total_leds;

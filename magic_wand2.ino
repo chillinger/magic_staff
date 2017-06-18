@@ -1,7 +1,6 @@
 #include <Arduino.h>
 #include <Wire.h>
-#include <Adafruit_Sensor.h>
-#include <Adafruit_ADXL345_U.h>
+#include "ADXL345.h"
 
 #include <RingBuf.h>
 #include <Thread.h>
@@ -21,7 +20,7 @@
 
 
 /* Assign a unique ID to this sensor at the same time */
-Adafruit_ADXL345_Unified accel = Adafruit_ADXL345_Unified(12345);
+ADXL345 adxl;
 
 Thread animationThread = Thread();
 float global_hue = 2.0;
@@ -34,19 +33,8 @@ float offset_y = (-17.5+7.25)/2.0;
 float offset_z = (15.9+35.7)/2.0;
 int ran_cycles = 0;
 int cycles_stable_button = 0;
-
-void led_pulse(int magnitude){
-  led_blank();
-  for(int i = 0; i<LEDS_UNTEN; i++){
-    led_blank();
-    led_set_both(i,0,0,min(magnitude, 255));   
-    led_show_both();
-    
-    delayMicroseconds(500);
-  }
-  led_blank();
-  led_show_both();
-}
+int last_b1=1, last_b2=1, last_b3=1;
+bool flashlight_on = false;
 
 
 ScanAnimation * scanAnimation;
@@ -55,7 +43,8 @@ ShootAnimation * shootAnimation;
 BreatheAnimation * breatheAnimation;
 StarAnimation * starAnimation;
 ShootFromGripAnimation * shootFromGripAnimation;
-
+FlashLightAnimation * flashLightAnimation;
+Animation * idleAnimation;
 
 int max_parallel_animations = 10;
 Animation ** animations = malloc(sizeof(Animation*) * max_parallel_animations);
@@ -83,8 +72,24 @@ void animate(){
   
 }
 
+void setup_accelerometer(){
+  adxl.powerOn();
+  //look of tap movement on this axes - 1 == on; 0 == off
+  //Y-Axis of accelerometer is oriented along the length of the staff. It's the only axis I'm interested in
+  adxl.setTapDetectionOnX(0);
+  adxl.setTapDetectionOnY(1);
+  adxl.setTapDetectionOnZ(0);
+  //set values for what is a tap, and what is a double tap (0-255)
+  //set rather high to only react on stomping of the staff
+  adxl.setTapThreshold(255); //62.5mg per increment
+  adxl.setTapDuration(15); //625μs per increment
 
-
+  //we need to set up interrupts to a pin, even though we won't connect it - reading the registers is sufficient
+  //setting all interupts to take place on int pin 1
+  adxl.setInterruptMapping( ADXL345_INT_SINGLE_TAP_BIT,   ADXL345_INT1_PIN );
+  //register interupt actions - 1 == on; 0 == off  
+  adxl.setInterrupt( ADXL345_INT_SINGLE_TAP_BIT, 1);
+}
 void setup(void) 
 {
 #ifndef ESP8266
@@ -94,12 +99,7 @@ void setup(void)
   pinMode(BUTTON2_PIN, INPUT_PULLUP);
   pinMode(BUTTON3_PIN, INPUT_PULLUP);
   Serial.begin(9600);
-  Serial.println("Accelerometer Test"); Serial.println("");
-  if(!accel.begin())
-  {
-     /* There was a problem detecting the ADXL345 ... check your connections */
-      while(1);
-  }
+  setup_accelerometer();
   
   strip_unten.begin();
   strip_unten.show();
@@ -111,12 +111,17 @@ void setup(void)
   addAnimation(flashHeadAnimation);
   shootAnimation = new ShootAnimation(global_hue);
   addAnimation(shootAnimation);
-  //breatheAnimation = new BreatheAnimation(global_hue);
-  //addAnimation(breatheAnimation);
+  
+  breatheAnimation = new BreatheAnimation(global_hue);
   starAnimation = new StarAnimation(global_hue, 15);
-  addAnimation(starAnimation);
+  
+  idleAnimation = starAnimation;
+  addAnimation(idleAnimation);
   shootFromGripAnimation = new ShootFromGripAnimation(global_hue);
   addAnimation(shootFromGripAnimation);
+
+  flashLightAnimation = new FlashLightAnimation(1.0);
+  addAnimation(flashLightAnimation);
   
   animationThread.onRun(animate);
   animationThread.setInterval(3);
@@ -127,6 +132,7 @@ void setup(void)
 }
 
 
+
 void loop(void) 
 {
 
@@ -135,53 +141,61 @@ void loop(void)
   int b3 = digitalRead(BUTTON3_PIN);
 
 /* Get a new sensor event */     
-  sensors_event_t event;    
-  accel.getEvent(&event);   
-  
-  accel3d measurement = accel3d(event.acceleration.x - offset_x, event.acceleration.y - offset_y, event.acceleration.z - offset_z);   
+
+
+  /*accel3d measurement = accel3d(event.acceleration.x - offset_x, event.acceleration.y - offset_y, event.acceleration.z - offset_z);   
   float magn = measurement.magnitude();   
   exp_mov_avg = exp_mov_avg + filter_weight * (magn - exp_mov_avg);   
   x_mov_avg = x_mov_avg + axis_filter_weight * (measurement.x - x_mov_avg);   
   y_mov_avg = y_mov_avg + axis_filter_weight * (measurement.y - y_mov_avg);   
   z_mov_avg = z_mov_avg + axis_filter_weight * (measurement.z - z_mov_avg);
 
-  global_hue = 3.0 + 1.0 * measurement.x / magn + 2.0 * measurement.y / magn + 3.0 * measurement.z / magn;
-  /*Serial.print("hue: ");
-  Serial.print(global_hue);
-  Serial.print(", x norm: ");
-  Serial.print(1.0 * measurement.x / magn);
-  Serial.print(", y norm: ");
-  Serial.print(2.0 * measurement.y / magn);
-  Serial.print(", z norm: ");
-  Serial.println(3.0 * measurement.z / magn);*/
+  global_hue = 3.0 + 1.0 * measurement.x / magn + 2.0 * measurement.y / magn + 3.0 * measurement.z / magn;*/
+  int x,y,z;  
+  adxl.readAccel(&x, &y, &z); //read the accelerometer values and store them in variables  x,y,z
+  byte interrupts = adxl.getInterruptSource();
 
-
-  //if(ran_cycles > INITIAL_DELAY){
     if(animationThread.shouldRun()){
       animationThread.run();
     } 
     
-
-    if(b1 == 0){
+    //tap
+    if(adxl.triggered(interrupts, ADXL345_SINGLE_TAP)){
       shootFromGripAnimation->speed = 15.0;
       shootFromGripAnimation->reset();
-      
+    } 
+    if(last_b1 == 0 && b1 == 1){
+      flashlight_on = !flashlight_on;
+      if(flashlight_on){
+        flashLightAnimation->finished = false;      
+      }else{
+        flashLightAnimation->finished = true;
+        flashLightAnimation->reset();
+      }
     }
-    if(b2 == 0){
-      
-      flashHeadAnimation->reset();
+    if(last_b2 == 0 && b2 == 1){
+     if(idleAnimation == starAnimation){
+      idleAnimation = breatheAnimation;
+     }else{
+      idleAnimation = starAnimation;
+     }
     }
-    if(b3 == 0){
+    
+    if(last_b3 == 0 && b3 == 1){
       shootAnimation->speed = 15.0;
       shootAnimation->reset();
     }
 
+
     bool all_animations_done = scanAnimation->finished && flashHeadAnimation->finished && shootAnimation->finished && shootFromGripAnimation->finished;
     starAnimation->finished = !all_animations_done;
-    if(starAnimation->finished){
-      starAnimation->reset();
+    if(idleAnimation->finished){
+      idleAnimation->reset();
     }
-   
     
+   
+    last_b1 = b1;
+    last_b2 = b2;
+    last_b3 = b3;
 
 }

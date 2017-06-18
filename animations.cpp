@@ -254,3 +254,19 @@ void ShootFromGripAnimation::reset(){
   staff_down_done = false;
   flashHeadAnimation->reset();
 }
+
+
+//============== FLASHLIGHT
+FlashLightAnimation::FlashLightAnimation(float value){
+  this->value = value;
+}
+FlashLightAnimation::step(){
+  if(!finished){
+    led_set_head(HSV_to_RGB(0, 0.0, value)
+  }
+}
+
+FlashLightAnimation::reset(){
+  led_set_head(HSV_to_RGB(0, 0.0, 0.0)
+}
+

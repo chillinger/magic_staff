@@ -40,10 +40,10 @@ class FlashHeadAnimation: public Animation
       
   bool started = false;
   bool up = true;
-  float up_speed = 0.005;
-  float down_speed = 0.01;
+  float up_speed = 0.1;
+  float down_speed = 0.3;
   float hue = 0.0;
-  float saturation = 1.0;
+  float saturation = 0.0;
   float value = 0.0;
   double x = 0;
   
@@ -118,4 +118,14 @@ class StarAnimation: public Animation
   void reset();
 };
 
+class FlashLightAnimation: public Animation
+{
+
+  public:
+  float hue;
+  float value;
+  FlashLightAnimation(float value);
+  void step();
+  void reset();
+};
 #endif

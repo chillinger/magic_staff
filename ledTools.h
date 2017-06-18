@@ -43,5 +43,6 @@ void led_set_both(int , int , int  , int );
 
 void led_set_both(int , uint32_t );
 void led_set_head(uint32_t );
+void led_set_staff(uint32_t );
 
 #endif
