@@ -260,13 +260,13 @@ void ShootFromGripAnimation::reset(){
 FlashLightAnimation::FlashLightAnimation(float value){
   this->value = value;
 }
-FlashLightAnimation::step(){
+void FlashLightAnimation::step(){
   if(!finished){
-    led_set_head(HSV_to_RGB(0, 0.0, value)
+    led_set_head(HSV_to_RGB(0, 0.0, value));
   }
 }
 
-FlashLightAnimation::reset(){
-  led_set_head(HSV_to_RGB(0, 0.0, 0.0)
+void FlashLightAnimation::reset(){
+  led_set_head(HSV_to_RGB(0, 0.0, 0.0));
 }
 
