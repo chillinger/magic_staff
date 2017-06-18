@@ -2,7 +2,8 @@
 
 
 
-  
+//=================== ScanAnimation ===========
+
   ScanAnimation::ScanAnimation(int hue){
     this->hue = hue;
   }
@@ -47,6 +48,9 @@
     started = false;
     finished = false;
   }
+
+//=================== FlashHeadAnimation ===========
+
 
   FlashHeadAnimation::FlashHeadAnimation(float hue){
     reset();
@@ -93,6 +97,9 @@
      x = 0;
   }
 
+
+//=================== ShootAnimation ===========
+
 ShootAnimation::ShootAnimation(float hue){
   flashHeadAnimation = new FlashHeadAnimation(hue);
   this->speed = 7.0;
@@ -133,8 +140,10 @@ void ShootAnimation::reset(){
   finished = false;
   staff_done = false;
   flashHeadAnimation->reset();
+  flashHeadAnimation->hue = hue;
 }
 
+//=================== BreatheAnimation ===========
 
 BreatheAnimation::BreatheAnimation(float hue){
   this->hue = hue;
@@ -160,6 +169,8 @@ void BreatheAnimation::reset(){
   current_value = min_value;
   finished = false;
 }
+
+//=================== StarAnimation ===========
 
 StarAnimation::StarAnimation(float hue, int num_stars){
   this->hue = hue;
@@ -203,7 +214,7 @@ void StarAnimation::reset(){
   led_blank();
 }
 
-
+//=================== ShootFromGripAnimation ===========
 
 ShootFromGripAnimation::ShootFromGripAnimation(float hue){
   flashHeadAnimation = new FlashHeadAnimation(hue);
@@ -253,6 +264,7 @@ void ShootFromGripAnimation::reset(){
   staff_up_done = false;
   staff_down_done = false;
   flashHeadAnimation->reset();
+  flashHeadAnimation->hue = hue;
 }
 
 

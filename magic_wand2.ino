@@ -162,6 +162,7 @@ void loop(void)
     //tap
     if(adxl.triggered(interrupts, ADXL345_SINGLE_TAP)){
       shootFromGripAnimation->speed = 15.0;
+      shootFromGripAnimation->hue = global_hue;
       shootFromGripAnimation->reset();
     } 
     if(last_b1 == 0 && b1 == 1){
@@ -174,15 +175,15 @@ void loop(void)
       }
     }
     if(last_b2 == 0 && b2 == 1){
-     if(idleAnimation == starAnimation){
-      idleAnimation = breatheAnimation;
-     }else{
-      idleAnimation = starAnimation;
+     global_hue = global_hue + 1.0;
+     if(global_hue >= 6.0){
+      global_hue -= 6.0;
      }
     }
     
     if(last_b3 == 0 && b3 == 1){
       shootAnimation->speed = 15.0;
+      shootAnimation->hue = global_hue;
       shootAnimation->reset();
     }
 

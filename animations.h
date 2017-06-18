@@ -42,7 +42,7 @@ class FlashHeadAnimation: public Animation
   bool up = true;
   float up_speed = 0.1;
   float down_speed = 0.3;
-  float hue = 0.0;
+
   float saturation = 0.0;
   float value = 0.0;
   double x = 0;
@@ -51,6 +51,7 @@ class FlashHeadAnimation: public Animation
   double base = 1.5;
   int steps = 0;
   public:
+  float hue = 0.0;
   double dx = 1;
   FlashHeadAnimation(float hue);
   FlashHeadAnimation(float hue, float up_soeed, float down_speed);
